@@ -2,30 +2,24 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { useApp } from "@/lib/app";
 import { getSupabase, hasSupabaseEnv } from "@/lib/supabase";
-import { Spinner } from "./ui";
+import TextSize from "./TextSize";
+import { Icon, LinkButton, Spinner, type IconName } from "./ui";
 
-const NAV = [
-  { href: "/", label: "Home", icon: "🏠" },
-  { href: "/partite", label: "Partite", icon: "📅" },
-  { href: "/giocatori", label: "Giocatori", icon: "👤" },
-  { href: "/classifiche", label: "Classifiche", icon: "📊" },
-  { href: "/premi", label: "Premi", icon: "🏆" },
+const NAV: { href: string; label: string; icon: IconName }[] = [
+  { href: "/", label: "Home", icon: "home" },
+  { href: "/partite", label: "Partite", icon: "calendar" },
+  { href: "/giocatori", label: "Giocatori", icon: "users" },
+  { href: "/classifiche", label: "Classifiche", icon: "chart" },
+  { href: "/premi", label: "Premi", icon: "trophy" },
 ];
 
 export default function Shell({ children }: { children: ReactNode }) {
   const { loading, session, profile, isAdmin } = useApp();
   const path = usePathname();
   const router = useRouter();
-  const isLogin = path === "/login";
-
-  useEffect(() => {
-    if (!hasSupabaseEnv || loading) return;
-    if (!session && !isLogin) router.replace("/login");
-    if (session && isLogin) router.replace("/");
-  }, [loading, session, isLogin, router]);
 
   if (!hasSupabaseEnv) {
     return (
@@ -39,25 +33,30 @@ export default function Shell({ children }: { children: ReactNode }) {
     );
   }
 
-  if (isLogin) return <>{children}</>;
-  if (loading || !session) return <Spinner />;
+  // La pagina di accesso ha un layout suo: il sito resta consultabile senza account.
+  if (path === "/login") return <>{children}</>;
 
-  const items = isAdmin ? [...NAV, { href: "/admin", label: "Admin", icon: "⚙️" }] : NAV;
+  const items = isAdmin ? [...NAV, { href: "/admin", label: "Admin", icon: "settings" as IconName }] : NAV;
   const active = (href: string) => (href === "/" ? path === "/" : path.startsWith(href));
+  const loginHref = path && path !== "/" ? `/login?next=${encodeURIComponent(path)}` : "/login";
 
   return (
-    <div className="min-h-screen pb-20 md:pb-8">
-      <header className="sticky top-0 z-40 border-b border-ink-600 bg-ink-950/90 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
-          <Link href="/" className="font-display text-2xl font-extrabold uppercase leading-none tracking-wider">
-            IUSU <span className="text-pitch">LEAGUE</span>
+    <div className="flex min-h-screen flex-col">
+      <a href="#contenuto" className="skip-link">Vai al contenuto</a>
+
+      <header className="sticky top-0 z-40 border-b border-ink-600 bg-ink-950/95 backdrop-blur">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-3 gap-y-1 px-4 py-2">
+          <Link href="/" className="inline-flex min-h-tap items-center font-display text-xl font-extrabold uppercase leading-none tracking-wider sm:text-2xl" aria-label="IUSU League, vai alla home">
+            IUSU <span className="ml-1.5 text-pitch">LEAGUE</span>
           </Link>
-          <nav className="hidden gap-1 md:flex">
+
+          <nav aria-label="Principale" className="hidden gap-1 lg:flex">
             {items.map((i) => (
               <Link
                 key={i.href}
                 href={i.href}
-                className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition ${
+                aria-current={active(i.href) ? "page" : undefined}
+                className={`inline-flex min-h-tap items-center rounded-lg px-3 text-sm font-semibold transition ${
                   active(i.href) ? "bg-pitch text-black" : "text-neutral-300 hover:bg-ink-700 hover:text-white"
                 }`}
               >
@@ -65,34 +64,62 @@ export default function Shell({ children }: { children: ReactNode }) {
               </Link>
             ))}
           </nav>
-          <div className="flex items-center gap-3 text-xs text-neutral-400">
-            <span className="hidden sm:inline">
-              {profile?.display_name ?? session.user.email} {isAdmin && <span className="text-gold">· admin</span>}
-            </span>
-            <button
-              className="rounded-md border border-ink-500 px-2 py-1 hover:border-pitch/60 hover:text-white"
-              onClick={async () => {
-                await getSupabase().auth.signOut();
-                router.replace("/login");
-              }}
-            >
-              Esci
-            </button>
+
+          <div className="flex items-center gap-2">
+            <div className="sm:hidden"><TextSize compact /></div>
+            <div className="hidden sm:block"><TextSize /></div>
+            {session ? (
+              <>
+                <span className="hidden max-w-[10rem] truncate text-xs text-neutral-400 lg:inline">
+                  {profile?.display_name ?? session.user.email}
+                  {isAdmin && <span className="text-gold"> · admin</span>}
+                </span>
+                <button
+                  type="button"
+                  aria-label="Esci dall'account"
+                  title="Esci"
+                  className="inline-flex min-h-tap items-center gap-1.5 rounded-lg border border-control px-3 text-sm font-semibold text-white hover:border-pitch"
+                  onClick={async () => {
+                    await getSupabase().auth.signOut();
+                    router.refresh();
+                  }}
+                >
+                  <Icon name="logout" size={18} />
+                  <span className="hidden sm:inline">Esci</span>
+                </button>
+              </>
+            ) : (
+              <LinkButton href={loginHref} variant="primary" aria-label="Accedi" title="Accedi">
+                <Icon name="login" size={18} />
+                <span className="hidden sm:inline">Accedi</span>
+              </LinkButton>
+            )}
           </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-4 py-6">{children}</main>
+      <main id="contenuto" tabIndex={-1} className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 pb-28 outline-none lg:pb-10">
+        {loading ? <Spinner /> : children}
+      </main>
 
-      <nav className="fixed inset-x-0 bottom-0 z-40 grid border-t border-ink-600 bg-ink-950/95 backdrop-blur md:hidden" style={{ gridTemplateColumns: `repeat(${items.length}, 1fr)` }}>
+      <footer className="mx-auto hidden w-full max-w-6xl px-4 pb-8 text-xs text-neutral-500 lg:block">
+        IUSU League · risultati, classifiche e statistiche della lega. Contano solo le partite confermate.
+      </footer>
+
+      <nav
+        aria-label="Principale (mobile)"
+        className="fixed inset-x-0 bottom-0 z-40 grid border-t border-ink-600 bg-ink-950/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
+        style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
+      >
         {items.map((i) => (
           <Link
             key={i.href}
             href={i.href}
-            className={`flex flex-col items-center gap-0.5 py-2 text-[11px] font-semibold ${active(i.href) ? "text-pitch" : "text-neutral-400"}`}
+            aria-current={active(i.href) ? "page" : undefined}
+            className={`flex min-h-[3.5rem] flex-col items-center justify-center gap-0.5 px-1 text-xs font-semibold ${active(i.href) ? "text-pitch" : "text-neutral-400"}`}
           >
-            <span className="text-lg leading-none">{i.icon}</span>
-            {i.label}
+            <Icon name={i.icon} size={22} />
+            <span className="max-w-full truncate">{i.label}</span>
           </Link>
         ))}
       </nav>

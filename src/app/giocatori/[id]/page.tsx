@@ -41,7 +41,7 @@ export default function PlayerPage() {
 
   return (
     <>
-      <Link href="/giocatori" className="mb-4 inline-block text-sm text-neutral-400 hover:text-white">← Tutti i giocatori</Link>
+      <Link href="/giocatori" className="mb-3 inline-flex min-h-tap items-center text-sm font-semibold text-neutral-300 hover:text-white">← Tutti i giocatori</Link>
 
       <div className="grid gap-6 md:grid-cols-[260px_1fr]">
         <div className="flex flex-col items-center gap-4">
@@ -100,7 +100,7 @@ export default function PlayerPage() {
 
           <Card>
             <SectionTitle>Confronto diretto</SectionTitle>
-            <select value={other} onChange={(e) => setOther(e.target.value)}>
+            <select aria-label="Scegli il giocatore con cui confrontarti" value={other} onChange={(e) => setOther(e.target.value)}>
               <option value="">Scegli un altro giocatore…</option>
               {players.filter((p) => p.id !== id).map((p) => <option key={p.id} value={p.id}>{playerName(p)}</option>)}
             </select>
@@ -133,14 +133,16 @@ export default function PlayerPage() {
                   const m = matchById.get(l.matchId);
                   return (
                     <li key={l.matchId}>
-                      <Link href={`/partite/${l.matchId}`} className="flex items-center justify-between gap-3 py-2 text-sm hover:text-pitch">
-                        <span className="flex items-center gap-2">
-                          <Badge tone={l.result === "W" ? "green" : l.result === "L" ? "red" : "gray"}>{l.result === "W" ? "V" : l.result === "L" ? "P" : "N"}</Badge>
-                          {fmtDate(l.date)} · {m ? `${m.score_a}–${m.score_b}` : ""} · {TEAM_NAMES[l.team]}
+                      <Link href={`/partite/${l.matchId}`} className="flex min-h-tap items-center justify-between gap-3 py-2 text-sm hover:text-pitch">
+                        <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                          <Badge tone={l.result === "W" ? "green" : l.result === "L" ? "red" : "gray"}>{l.result === "W" ? "Vittoria" : l.result === "L" ? "Sconfitta" : "Pareggio"}</Badge>
+                          <span>{fmtDate(l.date)} · {m ? `${m.score_a}–${m.score_b}` : ""} · {TEAM_NAMES[l.team]}</span>
                         </span>
-                        <span className="text-neutral-400">
-                          {l.goals > 0 && `⚽${l.goals} `}{l.assists > 0 && `🎯${l.assists} `}{l.mvp && "👑 "}
-                          <span className="font-display text-lg font-bold text-white">{l.rating.toFixed(1)}</span>
+                        <span className="shrink-0 text-neutral-300">
+                          {l.goals > 0 && <span aria-label={`${l.goals} gol`}>⚽{l.goals} </span>}
+                          {l.assists > 0 && <span aria-label={`${l.assists} assist`}>🎯{l.assists} </span>}
+                          {l.mvp && <span aria-label="MVP">👑 </span>}
+                          <span className="font-display text-lg font-bold text-white" aria-label={`voto ${l.rating.toFixed(1)}`}>{l.rating.toFixed(1)}</span>
                         </span>
                       </Link>
                     </li>

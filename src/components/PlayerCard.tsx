@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { Player } from "@/lib/types";
-import { ROLE_SHORT, playerName } from "@/lib/types";
+import { ROLE_LABEL, ROLE_SHORT, playerName } from "@/lib/types";
 import { cardStats, computeOverall } from "@/lib/overall";
 import { Avatar } from "./ui";
 
@@ -16,7 +16,8 @@ export function tierOf(ovr: number): { name: string; bg: string; text: string; r
 export default function PlayerCard({ player, href, size = "md" }: { player: Player; href?: string; size?: "sm" | "md" | "lg" }) {
   const ovr = computeOverall(player);
   const t = tierOf(ovr);
-  const dim = { sm: "w-36", md: "w-44", lg: "w-60" }[size];
+  // md occupa la colonna (max 11rem): su telefono stretto le carte non sbordano più dalla griglia a 2 colonne.
+  const dim = { sm: "w-36", md: "w-full max-w-[11rem]", lg: "w-60 max-w-full" }[size];
   const body = (
     <div className={`${dim} select-none drop-shadow-[0_8px_18px_rgba(0,0,0,0.55)] transition hover:-translate-y-1`}>
       <div className={`fut-card bg-gradient-to-b ${t.bg} ${t.text} aspect-[3/4.1] px-3 pb-5 pt-5`}>
@@ -44,5 +45,14 @@ export default function PlayerCard({ player, href, size = "md" }: { player: Play
       </div>
     </div>
   );
-  return href ? <Link href={href} aria-label={playerName(player)}>{body}</Link> : body;
+  // Per chi usa uno screen reader la carta (valori e sigle) è decorativa: leggiamo una frase sola.
+  const spoken = `${playerName(player)}, ${ROLE_LABEL[player.preferred_role]}, valutazione ${ovr}`;
+  return href ? (
+    <Link href={href} className={size === "md" ? "block w-full max-w-[11rem]" : "block max-w-full"}>
+      <span className="sr-only">{spoken}</span>
+      <div aria-hidden="true">{body}</div>
+    </Link>
+  ) : (
+    body
+  );
 }

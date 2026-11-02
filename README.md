@@ -4,7 +4,7 @@ La lega del calcetto di Iusu: squadre bilanciate, risultati, statistiche, classi
 Next.js + TypeScript + Tailwind + Supabase (PostgreSQL, login, permessi, tempo reale).
 
 ## Cosa c'è nella fase 1
-- Login per gli amici; il **primo account registrato diventa admin**
+- Sito consultabile da chiunque senza login; l'account serve solo per dare la propria disponibilità o gestire la lega. Il **primo account registrato diventa admin**
 - Giocatori con valutazioni 1-10, overall per ruolo e carte in stile Ultimate Team
 - Disponibilità per partita (ognuno la sua, l'admin per tutti)
 - Generatore squadre: casuale, bilanciata, competitiva; blocchi, spostamenti, scambi, panchina, portieri, differenza di forza, salvataggio, condivisione WhatsApp
@@ -23,8 +23,9 @@ La logica del valore di mercato è già in `src/lib/market.ts`.
 ### 1. Database (Supabase, gratis)
 1. Crea un progetto su https://supabase.com
 2. **SQL Editor** → incolla tutto `supabase/schema.sql` → Run
-3. **Authentication → Providers → Email**: per iniziare disattiva "Confirm email" (altrimenti ogni amico deve confermare via mail)
-4. **Project Settings → API**: copia *Project URL* e la chiave *anon public*
+3. Sempre nel **SQL Editor** incolla `supabase/public_read.sql` → Run. Serve per far vedere partite, risultati e classifiche anche a chi non ha fatto login (email e voti individuali restano riservati). Senza questo passaggio i visitatori vedranno errori di caricamento. Si può rieseguire senza rischi.
+4. **Authentication → Providers → Email**: per iniziare disattiva "Confirm email" (altrimenti ogni amico deve confermare via mail)
+5. **Project Settings → API**: copia *Project URL* e la chiave *anon public*
 
 ### 2. Sito (Vercel, gratis)
 1. Metti questa cartella su GitHub

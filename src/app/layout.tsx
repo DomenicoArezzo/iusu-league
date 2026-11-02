@@ -5,11 +5,14 @@ import { AppProvider } from "@/lib/app";
 import Shell from "@/components/Shell";
 
 export const metadata: Metadata = {
-  title: "IUSU LEAGUE",
-  description: "La lega del calcetto di Iusu: squadre, statistiche, classifiche e premi.",
+  title: { default: "IUSU LEAGUE", template: "%s · IUSU LEAGUE" },
+  description: "La lega del calcetto di Iusu: partite, risultati, classifiche, squadre e premi.",
 };
 
-export const viewport: Viewport = { themeColor: "#070707", width: "device-width", initialScale: 1 };
+export const viewport: Viewport = { themeColor: "#070707", width: "device-width", initialScale: 1, viewportFit: "cover" };
+
+// Applica la dimensione del testo scelta prima del primo disegno, per evitare lo "scatto" al caricamento.
+const textSizeScript = `try{var s=localStorage.getItem("iusu-text-size");if(s==="lg"||s==="xl")document.documentElement.dataset.textSize=s}catch(e){}`;
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
@@ -21,6 +24,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap"
         />
+        <script dangerouslySetInnerHTML={{ __html: textSizeScript }} />
       </head>
       <body>
         <AppProvider>

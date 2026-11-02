@@ -56,7 +56,7 @@ export default function AwardsPage() {
       <PageHeader
         title="Premi"
         sub="Assegnati in base ai risultati confermati"
-        right={<div className="w-52"><select value={sid} onChange={(e) => setSeasonId(e.target.value)}>{seasons.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select></div>}
+        right={<div className="w-full sm:w-52"><select aria-label="Stagione" value={sid} onChange={(e) => setSeasonId(e.target.value)}>{seasons.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select></div>}
       />
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -65,12 +65,12 @@ export default function AwardsPage() {
           return (
             <Card key={def.key} className={def.funny ? "border-dashed" : ""}>
               <div className="flex items-start gap-3">
-                <div className="text-3xl">{def.icon}</div>
+                <div className="text-3xl" aria-hidden="true">{def.icon}</div>
                 <div className="min-w-0 flex-1">
-                  <div className="font-display text-lg font-bold uppercase leading-tight text-gold">{def.title}</div>
-                  <div className="text-xs text-neutral-500">{def.description}</div>
+                  <h3 className="font-display text-lg font-bold uppercase leading-tight text-gold">{def.title}</h3>
+                  <div className="text-xs text-neutral-400">{def.description}</div>
                   {p ? (
-                    <Link href={`/giocatori/${p.id}`} className="mt-2 flex items-center gap-2 hover:text-pitch">
+                    <Link href={`/giocatori/${p.id}`} className="mt-2 flex min-h-tap items-center gap-2 hover:text-pitch">
                       <Avatar player={p} size={30} />
                       <div className="min-w-0">
                         <div className="truncate font-semibold">{playerName(p)}</div>
@@ -78,10 +78,10 @@ export default function AwardsPage() {
                       </div>
                     </Link>
                   ) : (
-                    <div className="mt-2 text-sm text-neutral-600">{def.auto ? "Non ancora assegnato" : "Da assegnare"}</div>
+                    <div className="mt-2 text-sm text-neutral-400">{def.auto ? "Non ancora assegnato" : "Da assegnare"}</div>
                   )}
                   {isAdmin && !def.auto && (
-                    <select className="mt-2 !py-1 text-xs" value={playerId ?? ""} onChange={(e) => setManual(def.key, e.target.value)}>
+                    <select aria-label={`Assegna il premio ${def.title}`} className="mt-2 !py-1 text-sm" value={playerId ?? ""} onChange={(e) => setManual(def.key, e.target.value)}>
                       <option value="">— nessuno —</option>
                       {players.map((pl) => <option key={pl.id} value={pl.id}>{playerName(pl)}</option>)}
                     </select>

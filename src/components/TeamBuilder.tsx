@@ -146,31 +146,47 @@ export default function TeamBuilder({ match }: { match: Match }) {
           return (
             <div
               key={p.id}
-              className={`flex items-center gap-2 rounded-lg border px-2 py-1.5 ${
+              className={`flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border px-2 py-1.5 ${
                 swapFrom === p.id ? "border-gold bg-gold/10" : "border-ink-600 bg-ink-900"
               }`}
             >
-              <Avatar player={p} size={30} />
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-sm font-semibold">{playerName(p)}</div>
-                <div className="text-[11px] text-neutral-500">{ROLE_SHORT[p.preferred_role]} · OVR {computeOverall(p)}</div>
+              <div className="flex min-w-0 flex-1 basis-36 items-center gap-2">
+                <Avatar player={p} size={30} />
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm font-semibold">{playerName(p)}</div>
+                  <div className="text-xs text-neutral-400">{ROLE_SHORT[p.preferred_role]} · OVR {computeOverall(p)}</div>
+                </div>
               </div>
-              {side !== "R" && (
+              {/* Controlli: su telefono vanno a capo sotto il nome, ognuno con un bersaglio di tocco di almeno 36px. */}
+              <div className="ml-auto flex items-center gap-1">
+                {side !== "R" && (
+                  <button
+                    title="Portiere"
+                    aria-label={`${playerName(p)}: portiere`}
+                    aria-pressed={gks.has(p.id)}
+                    onClick={() => setGks((g) => { const n = new Set(g); if (n.has(p.id)) n.delete(p.id); else n.add(p.id); return n; })}
+                    className={`min-h-9 min-w-9 rounded px-2 text-xs font-bold ${gks.has(p.id) ? "bg-gold text-black" : "bg-ink-600 text-neutral-300"}`}
+                  >
+                    POR
+                  </button>
+                )}
                 <button
-                  title="Portiere"
-                  onClick={() => setGks((g) => { const n = new Set(g); if (n.has(p.id)) n.delete(p.id); else n.add(p.id); return n; })}
-                  className={`rounded px-1.5 py-0.5 text-[11px] font-bold ${gks.has(p.id) ? "bg-gold text-black" : "bg-ink-600 text-neutral-400"}`}
+                  title={isLocked ? "Sblocca" : "Blocca in questa squadra"}
+                  aria-label={`${isLocked ? "Sblocca" : "Blocca in questa squadra"}: ${playerName(p)}`}
+                  aria-pressed={isLocked}
+                  onClick={() => lockCycle(p.id, side)}
+                  className={`min-h-9 min-w-9 text-base ${isLocked ? "" : "opacity-50 hover:opacity-100"}`}
                 >
-                  POR
+                  🔒
                 </button>
-              )}
-              <button title={isLocked ? "Sblocca" : "Blocca in questa squadra"} onClick={() => lockCycle(p.id, side)} className={`text-sm ${isLocked ? "" : "opacity-35 hover:opacity-100"}`}>
-                🔒
-              </button>
-              <button title="Scambia con un altro" onClick={() => doSwap(p.id)} className="text-sm opacity-60 hover:opacity-100">⇄</button>
-              <div className="flex flex-col gap-0.5 text-[10px] font-bold">
+                <button title="Scambia con un altro" aria-label={`Scambia ${playerName(p)} con un altro`} onClick={() => doSwap(p.id)} className="min-h-9 min-w-9 text-base opacity-70 hover:opacity-100">⇄</button>
                 {(["A", "B", "R"] as Side[]).filter((s) => s !== side).map((s) => (
-                  <button key={s} onClick={() => move(p.id, s)} className="rounded bg-ink-600 px-1 text-neutral-300 hover:bg-pitch hover:text-black">
+                  <button
+                    key={s}
+                    aria-label={`Sposta ${playerName(p)} in ${s === "R" ? "panchina" : TEAM_NAMES[s]}`}
+                    onClick={() => move(p.id, s)}
+                    className="min-h-9 rounded bg-ink-600 px-2 text-xs font-bold text-neutral-200 hover:bg-pitch hover:text-black"
+                  >
                     →{s === "R" ? "Pan" : s}
                   </button>
                 ))}
@@ -198,7 +214,7 @@ export default function TeamBuilder({ match }: { match: Match }) {
             const lk = locked[p.id];
             return (
               <div key={p.id} className={`flex items-center overflow-hidden rounded-full border text-sm ${on ? "border-pitch bg-pitch/10" : "border-ink-500 bg-ink-900 text-neutral-400"}`}>
-                <button onClick={() => toggle(p.id)} className="flex items-center gap-1.5 py-1 pl-3 pr-2 font-medium">
+                <button onClick={() => toggle(p.id)} aria-pressed={on} className="flex min-h-10 items-center gap-1.5 py-1 pl-3 pr-2 font-medium">
                   {av === "yes" && <span title="Disponibile">✅</span>}
                   {av === "maybe" && <span title="Forse">❔</span>}
                   {av === "no" && <span title="Non c'è">⛔</span>}

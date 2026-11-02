@@ -32,23 +32,24 @@ export default function PlayersPage() {
         sub={`${players.length} in rosa`}
         right={isAdmin && <Button variant="primary" onClick={() => setAdding(true)}>+ Nuovo giocatore</Button>}
       />
-      <div className="mb-5 flex flex-wrap gap-2">
-        <div className="w-full sm:w-64"><input placeholder="Cerca…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
+      <div className="mb-5 flex flex-wrap items-center gap-2">
+        <div className="w-full sm:w-64"><input type="search" aria-label="Cerca un giocatore" placeholder="Cerca un giocatore…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
         <div className="w-full sm:w-48">
-          <select value={role} onChange={(e) => setRole(e.target.value as PlayerRole | "tutti")}>
+          <select aria-label="Filtra per ruolo" value={role} onChange={(e) => setRole(e.target.value as PlayerRole | "tutti")}>
             <option value="tutti">Tutti i ruoli</option>
             {Object.entries(ROLE_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
         </div>
-        <label className="flex items-center gap-2 text-sm text-neutral-400">
+        <label className="flex min-h-tap items-center gap-2 text-sm text-neutral-300">
           <input type="checkbox" checked={showAll} onChange={(e) => setShowAll(e.target.checked)} /> Mostra inattivi
         </label>
       </div>
+      <p className="sr-only" role="status">{list.length} giocatori trovati</p>
 
       {list.length === 0 ? (
         <Empty>{players.length === 0 ? (isAdmin ? "Nessun giocatore: aggiungi il primo con il pulsante in alto." : "L'admin non ha ancora inserito i giocatori.") : "Nessun risultato."}</Empty>
       ) : (
-        <div className="grid grid-cols-2 justify-items-center gap-x-3 gap-y-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+        <div className="grid grid-cols-2 justify-items-center gap-x-2 gap-y-6 sm:grid-cols-3 sm:gap-x-3 md:grid-cols-4 lg:grid-cols-5">
           {list.map((p) => <PlayerCard key={p.id} player={p} href={`/giocatori/${p.id}`} />)}
         </div>
       )}

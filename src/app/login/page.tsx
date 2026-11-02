@@ -1,16 +1,32 @@
 "use client";
 
-import { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useApp } from "@/lib/app";
 import { getSupabase } from "@/lib/supabase";
-import { Button, Field } from "@/components/ui";
+import { Button, Field, Icon } from "@/components/ui";
+
+/** Dopo l'accesso si torna alla pagina da cui si veniva (solo percorsi interni del sito). */
+function nextPath(): string {
+  if (typeof window === "undefined") return "/";
+  const n = new URLSearchParams(window.location.search).get("next");
+  return n && n.startsWith("/") && !n.startsWith("//") ? n : "/";
+}
 
 export default function LoginPage() {
+  const router = useRouter();
+  const { session } = useApp();
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ text: string; error: boolean } | null>(null);
+
+  useEffect(() => {
+    if (session) router.replace(nextPath());
+  }, [session, router]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -29,18 +45,25 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-5 py-10">
-      <div className="mb-8 text-center">
+    <main id="contenuto" className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-5 py-10">
+      <Link href="/" className="mb-6 inline-flex min-h-tap items-center gap-1 self-start text-sm font-semibold text-neutral-300 hover:text-white">
+        <Icon name="chevron" size={16} className="rotate-180" /> Continua senza accedere
+      </Link>
+
+      <div className="mb-6 text-center">
         <div className="font-display text-6xl font-extrabold uppercase leading-none tracking-wider">
           IUSU <span className="text-pitch">LEAGUE</span>
         </div>
-        <p className="mt-2 text-sm text-neutral-400">Il calcetto di Iusu, a livello di campionato.</p>
+        <h1 className="mt-3 text-lg font-semibold">{mode === "login" ? "Accedi" : "Crea il tuo account"}</h1>
+        <p className="mt-1 text-sm text-neutral-400">
+          Per guardare partite, risultati e classifiche non serve l&apos;account. Serve solo per dare la tua disponibilità o gestire la lega.
+        </p>
       </div>
 
       <form onSubmit={submit} className="space-y-4 rounded-2xl border border-ink-600 bg-ink-800/80 p-6">
         {mode === "signup" && (
           <Field label="Come ti chiamiamo">
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome o soprannome" />
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome o soprannome" autoComplete="nickname" />
           </Field>
         )}
         <Field label="Email">
@@ -56,13 +79,17 @@ export default function LoginPage() {
             onChange={(e) => setPassword(e.target.value)}
           />
         </Field>
-        {msg && <p className={`text-sm ${msg.error ? "text-red-300" : "text-pitch"}`}>{msg.text}</p>}
-        <Button variant="primary" className="w-full" disabled={busy} onClick={() => undefined} type="submit">
+        {msg && (
+          <p role={msg.error ? "alert" : "status"} className={`text-sm ${msg.error ? "text-red-300" : "text-pitch"}`}>
+            {msg.text}
+          </p>
+        )}
+        <Button variant="primary" className="w-full" disabled={busy} type="submit">
           {busy ? "Un attimo…" : mode === "login" ? "Entra" : "Crea account"}
         </Button>
         <button
           type="button"
-          className="w-full text-center text-sm text-neutral-400 hover:text-white"
+          className="min-h-tap w-full text-center text-sm text-neutral-300 hover:text-white"
           onClick={() => {
             setMode(mode === "login" ? "signup" : "login");
             setMsg(null);

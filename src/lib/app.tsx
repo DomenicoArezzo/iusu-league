@@ -84,12 +84,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // ---- caricamento dati
   const refresh = useCallback(async () => {
-    if (!hasSupabaseEnv || !session) return;
+    if (!hasSupabaseEnv) return;
     const sb = getSupabase();
     const q = (t: string) => sb.from(t).select("*");
+    // Le tabelle "pubbliche" si leggono anche senza login (vedi supabase/public_read.sql).
+    // I profili contengono le email: li leggiamo solo da utenti autenticati.
+    const noProfiles = Promise.resolve({ data: [] as unknown[], error: null });
     const [pl, ma, mp, ev, av, se, ad, aw, pr, st] = await Promise.all([
       q("players"), q("matches"), q("match_players"), q("match_events"), q("availability"),
-      q("seasons"), q("market_adjustments"), q("manual_awards"), q("profiles"), q("settings"),
+      q("seasons"), q("market_adjustments"), q("manual_awards"), session ? q("profiles") : noProfiles, q("settings"),
     ]);
     const firstError = [pl, ma, mp, ev, av, se, ad, aw, pr, st].find((r) => r.error);
     if (firstError?.error) {
@@ -99,7 +102,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
     const profiles = (pr.data ?? []) as Profile[];
     setData({
-      profile: profiles.find((p) => p.id === session.user.id) ?? null,
+      profile: session ? profiles.find((p) => p.id === session.user.id) ?? null : null,
       players: (pl.data ?? []) as Player[],
       matches: (ma.data ?? []) as Match[],
       matchPlayers: (mp.data ?? []) as MatchPlayer[],
@@ -114,19 +117,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setLoading(false);
   }, [session, toast]);
 
+  // Carica i dati appena la sessione è nota (anche da visitatore) e li ricarica
+  // in silenzio quando si entra o si esce, senza far sparire la pagina.
   useEffect(() => {
     if (!authReady) return;
-    if (!session) {
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
     refresh();
   }, [authReady, session, refresh]);
 
   // ---- aggiornamenti in tempo reale (con piccola attesa per raggruppare le modifiche)
   useEffect(() => {
-    if (!hasSupabaseEnv || !session) return;
+    if (!hasSupabaseEnv || !authReady) return;
     const sb = getSupabase();
     let timer: ReturnType<typeof setTimeout> | undefined;
     const channel = sb
@@ -140,7 +140,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       clearTimeout(timer);
       void sb.removeChannel(channel);
     };
-  }, [session, refresh]);
+  }, [authReady, refresh]);
 
   const write = useCallback<AppData["write"]>(
     async (fn, okMsg) => {
@@ -183,10 +183,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   return (
     <Ctx.Provider value={value}>
       {children}
-      <div className="pointer-events-none fixed inset-x-0 top-3 z-[100] flex flex-col items-center gap-2 px-4">
+      <div aria-live="polite" className="pointer-events-none fixed inset-x-0 top-3 z-[100] flex flex-col items-center gap-2 px-4">
         {toasts.map((t) => (
           <div
             key={t.id}
+            role={t.kind === "error" ? "alert" : "status"}
             className={`pointer-events-auto rounded-lg border px-4 py-2 text-sm shadow-lg ${
               t.kind === "error" ? "border-red-500/50 bg-red-950 text-red-100" : "border-pitch/40 bg-ink-800 text-white"
             }`}

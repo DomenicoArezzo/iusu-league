@@ -7,7 +7,7 @@ import { useStats } from "@/lib/derive";
 import { buildRankings } from "@/lib/rankings";
 import { monthKey, type Period } from "@/lib/stats";
 import { playerName } from "@/lib/types";
-import { Avatar, Card, Empty, MEDAL, PageHeader, Segmented } from "@/components/ui";
+import { Avatar, Card, Empty, MEDAL, PageHeader, Rank, Segmented } from "@/components/ui";
 
 type Kind = "season" | "month" | "last5" | "last10" | "all";
 
@@ -39,6 +39,7 @@ export default function RankingsPage() {
 
       <div className="mb-3 flex flex-wrap items-center gap-3">
         <Segmented
+          label="Periodo della classifica"
           value={kind}
           onChange={setKind}
           options={[
@@ -51,14 +52,14 @@ export default function RankingsPage() {
         />
         {kind === "season" && (
           <div className="w-48">
-            <select value={sid} onChange={(e) => setSeasonId(e.target.value)}>
+            <select aria-label="Stagione" value={sid} onChange={(e) => setSeasonId(e.target.value)}>
               {seasons.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
           </div>
         )}
         {kind === "month" && months.length > 0 && (
           <div className="w-48">
-            <select value={month} onChange={(e) => setMonth(e.target.value)}>
+            <select aria-label="Mese" value={month} onChange={(e) => setMonth(e.target.value)}>
               {!months.includes(month) && <option value={month}>{monthLabel(month)}</option>}
               {months.map((m) => <option key={m} value={m}>{monthLabel(m)}</option>)}
             </select>
@@ -66,12 +67,15 @@ export default function RankingsPage() {
         )}
       </div>
 
-      <div className="mb-4 flex gap-1.5 overflow-x-auto pb-2">
+      {/* Le 9 classifiche scorrono in orizzontale dentro questa riga (la pagina non scorre mai di lato). */}
+      <div role="group" aria-label="Tipo di classifica" className="no-scrollbar -mx-4 mb-4 flex gap-1.5 overflow-x-auto px-4 pb-2">
         {rankings.map((r) => (
           <button
             key={r.key}
+            type="button"
+            aria-pressed={current.key === r.key}
             onClick={() => setTab(r.key)}
-            className={`shrink-0 rounded-full border px-3 py-1.5 text-sm font-semibold ${current.key === r.key ? "border-pitch bg-pitch text-black" : "border-ink-500 text-neutral-300 hover:border-pitch/60"}`}
+            className={`min-h-tap shrink-0 rounded-full border px-4 text-sm font-semibold ${current.key === r.key ? "border-pitch bg-pitch text-black" : "border-control text-neutral-200 hover:border-pitch"}`}
           >
             {r.title}
           </button>
@@ -94,8 +98,8 @@ export default function RankingsPage() {
                 const p = r && byId.get(r.playerId);
                 if (!r || !p) return <div key={i} />;
                 return (
-                  <Link key={i} href={`/giocatori/${p.id}`} className="text-center">
-                    <div className="mb-1 text-2xl">{MEDAL[i]}</div>
+                  <Link key={i} href={`/giocatori/${p.id}`} className="min-w-0 text-center" aria-label={`${i + 1}° posto: ${playerName(p)} ${r.display}`}>
+                    <div className="mb-1 text-2xl" aria-hidden="true">{MEDAL[i]}</div>
                     <div className="mx-auto w-fit"><Avatar player={p} size={i === 0 ? 64 : 52} /></div>
                     <div className="mt-1 truncate text-sm font-semibold">{playerName(p)}</div>
                     <div className={`mt-1 rounded-t-lg py-2 font-display text-2xl font-bold ${i === 0 ? "h-20 bg-gold/20 text-gold" : i === 1 ? "h-14 bg-white/10" : "h-10 bg-[#b0713f]/25 text-[#e2a87a]"}`}>{r.display}</div>
@@ -110,12 +114,14 @@ export default function RankingsPage() {
                 if (!p) return null;
                 return (
                   <li key={r.playerId}>
-                    <Link href={`/giocatori/${p.id}`} className="flex items-center gap-3 py-2 hover:text-pitch">
-                      <span className="w-7 text-center font-display text-lg font-bold text-neutral-500">{i < 3 ? MEDAL[i] : i + 1}</span>
-                      <Avatar player={p} size={34} />
-                      <span className="flex-1 truncate font-semibold">{playerName(p)}</span>
-                      {r.sub && <span className="hidden text-xs text-neutral-500 sm:inline">{r.sub}</span>}
-                      <span className="w-16 text-right font-display text-xl font-bold">{r.display}</span>
+                    <Link href={`/giocatori/${p.id}`} className="flex min-h-[3.5rem] items-center gap-3 py-2 hover:text-pitch">
+                      <Rank pos={i} />
+                      <Avatar player={p} size={36} />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate font-semibold">{playerName(p)}</span>
+                        {r.sub && <span className="block truncate text-xs text-neutral-400">{r.sub}</span>}
+                      </span>
+                      <span className="w-16 shrink-0 text-right font-display text-xl font-bold">{r.display}</span>
                     </Link>
                   </li>
                 );

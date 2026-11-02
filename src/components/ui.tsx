@@ -29,6 +29,9 @@ const ICONS = {
   pin: "M12 21s6.5-5.6 6.5-11a6.5 6.5 0 0 0-13 0c0 5.4 6.5 11 6.5 11Zm0-8.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z",
   clock: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm0-13.5V12l3 2",
   shield: "M12 3.5 5 6v5.5c0 4.2 2.8 7.4 7 9 4.2-1.6 7-4.8 7-9V6l-7-2.5Z",
+  plus: "M12 5v14M5 12h14",
+  chat: "M21 11.5a8.5 8.5 0 0 1-12.6 7.4L3 20l1.2-5A8.5 8.5 0 1 1 21 11.5Z",
+  mail: "M4 6.5h16v11H4v-11Zm0 .5 8 6 8-6",
 } as const;
 
 export type IconName = keyof typeof ICONS;
@@ -96,7 +99,7 @@ export function PageHeader({ title, sub, right }: { title: string; sub?: string;
 /* Pulsanti                                                             */
 /* ------------------------------------------------------------------ */
 
-type Variant = "primary" | "ghost" | "danger" | "gold";
+type Variant = "primary" | "ghost" | "danger" | "gold" | "whatsapp";
 
 /** Classi condivise da Button e LinkButton: bersaglio di tocco di almeno 44px (36px per i pulsanti piccoli). */
 export function buttonClass(variant: Variant = "ghost", small = false, className = ""): string {
@@ -108,6 +111,8 @@ export function buttonClass(variant: Variant = "ghost", small = false, className
     gold: "bg-gold text-black hover:brightness-110",
     ghost: "border border-control bg-ink-700 text-white hover:border-pitch",
     danger: "border border-red-500/50 bg-red-950/60 text-red-100 hover:bg-red-900/70",
+    // Verde WhatsApp con testo nero (contrasto ampio): riconoscibile a colpo d'occhio.
+    whatsapp: "bg-[#25d366] text-black hover:brightness-110",
   }[variant];
   return `${base} ${size} ${look} ${className}`;
 }
@@ -279,6 +284,27 @@ export function Stat({ label, value, tone }: { label: string; value: ReactNode; 
     <div className="rounded-xl border border-ink-600 bg-ink-900 px-3 py-2">
       <div className="text-xs uppercase tracking-wide text-neutral-500">{label}</div>
       <div className={`font-display text-2xl font-bold ${tone === "gold" ? "text-gold" : tone === "green" ? "text-pitch" : "text-white"}`}>{value}</div>
+    </div>
+  );
+}
+
+/**
+ * Barra dei posti occupati (es. 7/10). Il testo accanto dice già i numeri: la barra è un aiuto visivo,
+ * ma ha comunque il suo valore leggibile dagli screen reader.
+ */
+export function SeatsBar({ taken, capacity, label = "Posti occupati", full = false }: { taken: number; capacity: number; label?: string; full?: boolean }) {
+  const pct = capacity > 0 ? Math.min(100, (taken / capacity) * 100) : 0;
+  return (
+    <div
+      role="progressbar"
+      aria-label={label}
+      aria-valuemin={0}
+      aria-valuemax={capacity}
+      aria-valuenow={Math.min(taken, capacity)}
+      aria-valuetext={`${taken} su ${capacity}`}
+      className="h-2.5 overflow-hidden rounded-full bg-ink-600"
+    >
+      <div className={`h-full rounded-full transition-all ${full ? "bg-gold" : "bg-pitch"}`} style={{ width: `${pct}%` }} />
     </div>
   );
 }

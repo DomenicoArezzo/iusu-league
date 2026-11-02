@@ -33,8 +33,8 @@ export default function Shell({ children }: { children: ReactNode }) {
     );
   }
 
-  // La pagina di accesso ha un layout suo: il sito resta consultabile senza account.
-  if (path === "/login") return <>{children}</>;
+  // Accesso e recupero password hanno un layout loro: il sito resta consultabile senza account.
+  if (path === "/login" || path?.startsWith("/password")) return <>{children}</>;
 
   const items = isAdmin ? [...NAV, { href: "/admin", label: "Admin", icon: "settings" as IconName }] : NAV;
   const active = (href: string) => (href === "/" ? path === "/" : path.startsWith(href));

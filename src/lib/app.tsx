@@ -5,7 +5,7 @@ import type { Session } from "@supabase/supabase-js";
 import { getSupabase, hasSupabaseEnv } from "./supabase";
 import { mergeSettings, DEFAULT_SETTINGS, type Settings } from "./settings";
 import type {
-  Availability, ManualAward, MarketAdjustment, Match, MatchEvent, MatchPlayer, Player, Profile, Season,
+  Availability, ManualAward, MarketAdjustment, Match, MatchEvent, MatchPlayer, MatchSignup, Player, Profile, Season,
 } from "./types";
 
 export interface AppData {
@@ -18,6 +18,9 @@ export interface AppData {
   matchPlayers: MatchPlayer[];
   events: MatchEvent[];
   availability: Availability[];
+  /** Iscrizioni alle partite (visibili a tutti). Vuote finché non è stata eseguita supabase/iscrizioni.sql. */
+  signups: MatchSignup[];
+  signupsByMatch: Map<string, MatchSignup[]>;
   seasons: Season[];
   adjustments: MarketAdjustment[];
   manualAwards: ManualAward[];
@@ -52,6 +55,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     matchPlayers: [] as MatchPlayer[],
     events: [] as MatchEvent[],
     availability: [] as Availability[],
+    signups: [] as MatchSignup[],
     seasons: [] as Season[],
     adjustments: [] as MarketAdjustment[],
     manualAwards: [] as ManualAward[],
@@ -90,10 +94,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     // Le tabelle "pubbliche" si leggono anche senza login (vedi supabase/public_read.sql).
     // I profili contengono le email: li leggiamo solo da utenti autenticati.
     const noProfiles = Promise.resolve({ data: [] as unknown[], error: null });
-    const [pl, ma, mp, ev, av, se, ad, aw, pr, st] = await Promise.all([
+    const [pl, ma, mp, ev, av, se, ad, aw, pr, st, su] = await Promise.all([
       q("players"), q("matches"), q("match_players"), q("match_events"), q("availability"),
       q("seasons"), q("market_adjustments"), q("manual_awards"), session ? q("profiles") : noProfiles, q("settings"),
+      q("match_signups"),
     ]);
+    // Le iscrizioni sono volutamente fuori dal controllo errori qui sotto: se la tabella non esiste ancora
+    // (migrazione non eseguita) il resto del sito deve continuare a funzionare.
     const firstError = [pl, ma, mp, ev, av, se, ad, aw, pr, st].find((r) => r.error);
     if (firstError?.error) {
       toast(`Errore di caricamento: ${firstError.error.message}`, "error");
@@ -108,6 +115,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       matchPlayers: (mp.data ?? []) as MatchPlayer[],
       events: (ev.data ?? []) as MatchEvent[],
       availability: (av.data ?? []) as Availability[],
+      signups: su.error ? [] : ((su.data ?? []) as MatchSignup[]),
       seasons: ((se.data ?? []) as Season[]).sort((a, b) => b.starts_on.localeCompare(a.starts_on)),
       adjustments: (ad.data ?? []) as MarketAdjustment[],
       manualAwards: (aw.data ?? []) as ManualAward[],
@@ -156,6 +164,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [refresh, toast],
   );
 
+  const signupsByMatch = useMemo(() => {
+    const map = new Map<string, MatchSignup[]>();
+    for (const s of data.signups) {
+      const list = map.get(s.match_id);
+      if (list) list.push(s);
+      else map.set(s.match_id, [s]);
+    }
+    return map;
+  }, [data.signups]);
+
   const value = useMemo<AppData>(
     () => ({
       loading: loading || !authReady,
@@ -167,6 +185,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       matchPlayers: data.matchPlayers,
       events: data.events,
       availability: data.availability,
+      signups: data.signups,
+      signupsByMatch,
       seasons: data.seasons,
       adjustments: data.adjustments,
       manualAwards: data.manualAwards,
@@ -177,7 +197,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       toast,
       write,
     }),
-    [loading, authReady, session, data, refresh, toast, write],
+    [loading, authReady, session, data, signupsByMatch, refresh, toast, write],
   );
 
   return (

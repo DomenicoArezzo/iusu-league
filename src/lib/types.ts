@@ -57,6 +57,20 @@ export interface Match {
   score_b: number | null;
   mvp_player_id: string | null;
   notes: string | null;
+  /** Posti totali per le iscrizioni (10). Le partite create prima della migrazione non lo hanno: vedi capacityOf(). */
+  capacity?: number | null;
+  /** Informazioni aggiuntive scritte da chi ha creato la partita. */
+  info?: string | null;
+  created_by?: string | null;
+}
+
+/** Iscrizione di un utente a una partita. Il nome è quello mostrato a tutti (mai l'email). */
+export interface MatchSignup {
+  id: string;
+  match_id: string;
+  user_id: string;
+  display_name: string;
+  created_at: string;
 }
 
 export interface MatchPlayer {

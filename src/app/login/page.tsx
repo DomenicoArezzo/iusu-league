@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useApp } from "@/lib/app";
+import { PASSWORD_HINT, PASSWORD_MIN, validatePassword } from "@/lib/password";
 import { getSupabase } from "@/lib/supabase";
 import { Button, Field, Icon } from "@/components/ui";
 
@@ -28,10 +29,24 @@ export default function LoginPage() {
     if (session) router.replace(nextPath());
   }, [session, router]);
 
+  // Si arriva qui con ?reset=1 dopo aver cambiato la password.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("reset") === "1") {
+      setMsg({ text: "Password aggiornata. Accedi con la nuova password.", error: false });
+    }
+  }, []);
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    setBusy(true);
     setMsg(null);
+    if (mode === "signup") {
+      const problem = validatePassword(password);
+      if (problem) {
+        setMsg({ text: problem, error: true });
+        return;
+      }
+    }
+    setBusy(true);
     const sb = getSupabase();
     if (mode === "login") {
       const { error } = await sb.auth.signInWithPassword({ email, password });
@@ -56,29 +71,36 @@ export default function LoginPage() {
         </div>
         <h1 className="mt-3 text-lg font-semibold">{mode === "login" ? "Accedi" : "Crea il tuo account"}</h1>
         <p className="mt-1 text-sm text-neutral-400">
-          Per guardare partite, risultati e classifiche non serve l&apos;account. Serve solo per dare la tua disponibilità o gestire la lega.
+          Per guardare partite, risultati e classifiche non serve l&apos;account. Serve per iscriverti alle partite, crearne una o gestire la lega.
         </p>
       </div>
 
       <form onSubmit={submit} className="space-y-4 rounded-2xl border border-ink-600 bg-ink-800/80 p-6">
         {mode === "signup" && (
-          <Field label="Come ti chiamiamo">
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome o soprannome" autoComplete="nickname" />
+          <Field label="Come ti chiamiamo" hint="Questo nome compare nella lista degli iscritti alle partite, visibile a tutti.">
+            <input required maxLength={40} value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome o soprannome" autoComplete="nickname" />
           </Field>
         )}
         <Field label="Email">
           <input type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} />
         </Field>
-        <Field label="Password" hint={mode === "signup" ? "Almeno 6 caratteri" : undefined}>
+        <Field label="Password" hint={mode === "signup" ? PASSWORD_HINT : undefined}>
           <input
             type="password"
             required
-            minLength={6}
+            minLength={mode === "signup" ? PASSWORD_MIN : 6}
             autoComplete={mode === "login" ? "current-password" : "new-password"}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
         </Field>
+        {mode === "login" && (
+          <div className="-mt-2 text-right">
+            <Link href="/password/dimenticata" className="inline-flex min-h-tap items-center text-sm font-semibold text-pitch hover:underline">
+              Password dimenticata?
+            </Link>
+          </div>
+        )}
         {msg && (
           <p role={msg.error ? "alert" : "status"} className={`text-sm ${msg.error ? "text-red-300" : "text-pitch"}`}>
             {msg.text}

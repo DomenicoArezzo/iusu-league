@@ -5,10 +5,13 @@ import { useParams, useRouter } from "next/navigation";
 import { useMemo } from "react";
 import { useApp } from "@/lib/app";
 import { fmtDate, fmtTime } from "@/lib/derive";
+import { matchTitle } from "@/lib/signups";
 import { getSupabase } from "@/lib/supabase";
 import { STATUS_LABEL, TEAM_NAMES, playerName, type EventType } from "@/lib/types";
 import Availability from "@/components/Availability";
 import ResultEditor from "@/components/ResultEditor";
+import ShareWhatsApp from "@/components/ShareWhatsApp";
+import Signups from "@/components/Signups";
 import TeamBuilder from "@/components/TeamBuilder";
 import { Avatar, Badge, Button, Card, Empty, Icon, SectionTitle } from "@/components/ui";
 
@@ -75,14 +78,19 @@ export default function MatchPage() {
         <div className="mb-2 flex justify-center gap-2">
           <Badge tone={done ? "green" : match.status === "annullata" ? "red" : "gold"}>{STATUS_LABEL[match.status]}</Badge>
         </div>
-        <h1 className="sr-only">Partita del {fmtDate(match.played_at, { day: "numeric", month: "long", year: "numeric" })}</h1>
-        <div className="text-sm capitalize text-neutral-300">
+        <h1 className="font-display text-3xl font-extrabold uppercase leading-tight sm:text-4xl">{matchTitle(match)}</h1>
+        <div className="mt-1 text-sm capitalize text-neutral-300">
           {fmtDate(match.played_at, { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
         </div>
         <div className="mt-1 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-sm text-neutral-400">
           <span className="inline-flex items-center gap-1.5"><Icon name="clock" size={16} /> ore {fmtTime(match.played_at)} · {match.duration_min}&apos;</span>
           <span className="inline-flex items-center gap-1.5"><Icon name="pin" size={16} /> {match.location}</span>
         </div>
+        {match.info && (
+          <p className="mx-auto mt-3 max-w-prose whitespace-pre-line rounded-lg bg-ink-900 p-3 text-left text-sm text-neutral-200">
+            <span className="font-semibold text-white">Informazioni: </span>{match.info}
+          </p>
+        )}
         <div
           className="my-4 grid grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-3"
           aria-label={match.score_a != null && match.score_b != null && finished ? `${TEAM_NAMES.A} ${match.score_a}, ${TEAM_NAMES.B} ${match.score_b}` : `${TEAM_NAMES.A} contro ${TEAM_NAMES.B}`}
@@ -106,7 +114,12 @@ export default function MatchPage() {
           </Link>
         )}
         {match.notes && <p className="mt-3 text-sm italic text-neutral-300">“{match.notes}”</p>}
+        <div className="mt-4 flex justify-center">
+          <ShareWhatsApp match={match} className="w-full sm:w-auto" />
+        </div>
       </Card>
+
+      {match.status === "programmata" && <Signups match={match} />}
 
       {match.status === "programmata" && <Availability match={match} />}
 

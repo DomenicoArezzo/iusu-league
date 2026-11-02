@@ -24,8 +24,10 @@ La logica del valore di mercato è già in `src/lib/market.ts`.
 1. Crea un progetto su https://supabase.com
 2. **SQL Editor** → incolla tutto `supabase/schema.sql` → Run
 3. Sempre nel **SQL Editor** incolla `supabase/public_read.sql` → Run. Serve per far vedere partite, risultati e classifiche anche a chi non ha fatto login (email e voti individuali restano riservati). Senza questo passaggio i visitatori vedranno errori di caricamento. Si può rieseguire senza rischi.
-4. **Authentication → Providers → Email**: per iniziare disattiva "Confirm email" (altrimenti ogni amico deve confermare via mail)
-5. **Project Settings → API**: copia *Project URL* e la chiave *anon public*
+4. Nel **SQL Editor** incolla `supabase/iscrizioni.sql` → Run. Attiva iscrizioni alle partite (massimo 10, controllato dal database), creazione partite e relative regole di sicurezza. Si può rieseguire senza rischi e non tocca i dati esistenti.
+5. **Authentication → URL Configuration**: come *Site URL* metti l'indirizzo del sito (es. `https://iusu-league.vercel.app`) e in *Redirect URLs* aggiungi `https://iusu-league.vercel.app/password/nuova` (per le anteprime Vercel anche `https://*.vercel.app/**`). Serve al link "Password dimenticata?".
+6. **Authentication → Providers → Email**: per iniziare disattiva "Confirm email" (altrimenti ogni amico deve confermare via mail). Le email di recupero password usano il servizio di Supabase, che ha un limite di invii orari: per un uso intenso configura un SMTP tuo in *Authentication → SMTP Settings*
+7. **Project Settings → API**: copia *Project URL* e la chiave *anon public*
 
 ### 2. Sito (Vercel, gratis)
 1. Metti questa cartella su GitHub

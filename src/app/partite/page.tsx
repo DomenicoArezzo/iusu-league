@@ -1,29 +1,22 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 import { useApp } from "@/lib/app";
-import { getSupabase } from "@/lib/supabase";
 import type { Match } from "@/lib/types";
+import CreateMatch from "@/components/CreateMatch";
 import MatchRow from "@/components/MatchRow";
-import { Button, Empty, Field, Modal, PageHeader } from "@/components/ui";
+import { Button, Empty, Icon, PageHeader } from "@/components/ui";
 
 const PAGE = 12;
-
-function defaultDate(): string {
-  const d = new Date();
-  d.setDate(d.getDate() + 1);
-  d.setHours(21, 0, 0, 0);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
 
 const monthLabel = (iso: string) => new Date(iso).toLocaleDateString("it-IT", { month: "long", year: "numeric" });
 
 export default function MatchesPage() {
-  const { matches, isAdmin, activeSeason, seasons, write } = useApp();
+  const router = useRouter();
+  const { matches, session, loading } = useApp();
   const [adding, setAdding] = useState(false);
   const [visible, setVisible] = useState(PAGE);
-  const [form, setForm] = useState({ played_at: defaultDate(), location: "Iusu", season_id: "" });
 
   const { upcoming, past } = useMemo(() => {
     const sorted = matches.slice().sort((a, b) => new Date(a.played_at).getTime() - new Date(b.played_at).getTime());
@@ -43,17 +36,23 @@ export default function MatchesPage() {
     return groups;
   }, [past, visible]);
 
-  async function create() {
-    const ok = await write(
-      () =>
-        getSupabase().from("matches").insert({
-          played_at: new Date(form.played_at).toISOString(),
-          location: form.location.trim() || "Iusu",
-          season_id: form.season_id || activeSeason?.id || null,
-        }),
-      "Partita creata",
-    );
-    if (ok) setAdding(false);
+  // Chi non ha fatto login viene mandato ad accedere e poi riportato qui con il form già aperto (?nuova=1).
+  useEffect(() => {
+    if (loading || !session) return;
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("nuova") === "1") {
+      setAdding(true);
+      url.searchParams.delete("nuova");
+      window.history.replaceState(null, "", url.pathname + url.search);
+    }
+  }, [loading, session]);
+
+  function startCreate() {
+    if (!session) {
+      router.push(`/login?next=${encodeURIComponent("/partite?nuova=1")}`);
+      return;
+    }
+    setAdding(true);
   }
 
   return (
@@ -61,13 +60,24 @@ export default function MatchesPage() {
       <PageHeader
         title="Partite"
         sub={`${matches.length} in archivio`}
-        right={isAdmin && <Button variant="primary" onClick={() => setAdding(true)}>+ Nuova partita</Button>}
+        right={
+          <Button variant="primary" className="w-full sm:w-auto" onClick={startCreate}>
+            <Icon name="plus" size={18} /> Crea una partita
+          </Button>
+        }
       />
 
       <section aria-labelledby="da-giocare" className="mb-8">
         <h2 id="da-giocare" className="mb-2 font-display text-xl font-bold uppercase text-pitch">Da giocare <span className="text-sm text-neutral-400">({upcoming.length})</span></h2>
         <div className="space-y-2">
-          {upcoming.length === 0 ? <Empty>{isAdmin ? "Nessuna partita in programma: creane una." : "Nessuna partita in programma."}</Empty> : upcoming.map((m) => <MatchRow key={m.id} m={m} />)}
+          {upcoming.length === 0 ? (
+            <Empty>
+              Nessuna partita in programma.{" "}
+              <button type="button" onClick={startCreate} className="min-h-tap font-semibold text-pitch underline">Creane una</button>
+            </Empty>
+          ) : (
+            upcoming.map((m) => <MatchRow key={m.id} m={m} />)
+          )}
         </div>
       </section>
 
@@ -92,22 +102,7 @@ export default function MatchesPage() {
         )}
       </section>
 
-      <Modal open={adding} onClose={() => setAdding(false)} title="Nuova partita">
-        <div className="space-y-3">
-          <Field label="Data e ora"><input type="datetime-local" value={form.played_at} onChange={(e) => setForm({ ...form, played_at: e.target.value })} /></Field>
-          <Field label="Luogo"><input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} /></Field>
-          <Field label="Stagione">
-            <select value={form.season_id} onChange={(e) => setForm({ ...form, season_id: e.target.value })}>
-              <option value="">Stagione attiva{activeSeason ? ` (${activeSeason.name})` : ""}</option>
-              {seasons.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
-          </Field>
-          <div className="flex justify-end gap-2 pt-2">
-            <Button onClick={() => setAdding(false)}>Annulla</Button>
-            <Button variant="primary" onClick={create}>Crea</Button>
-          </div>
-        </div>
-      </Modal>
+      <CreateMatch open={adding} onClose={() => setAdding(false)} />
     </>
   );
 }

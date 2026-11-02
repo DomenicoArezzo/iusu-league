@@ -8,11 +8,11 @@ import { buildNews, type NewsKind } from "@/lib/news";
 import { computeOverall } from "@/lib/overall";
 import { buildRankings } from "@/lib/rankings";
 import { computeRecords } from "@/lib/stats";
+import { capacityOf, signupState } from "@/lib/signups";
 import { TEAM_NAMES, playerName, type Player } from "@/lib/types";
 import MatchRow from "@/components/MatchRow";
-import { Avatar, Badge, Card, Empty, Icon, LinkButton, MoreLink, Rank, SectionTitle, type IconName } from "@/components/ui";
-
-const SEATS = 10;
+import { seatsText } from "@/components/Signups";
+import { Avatar, Badge, Card, Empty, Icon, LinkButton, MoreLink, Rank, SeatsBar, SectionTitle, type IconName } from "@/components/ui";
 
 const NEWS_ICON: Record<NewsKind, IconName> = { cancelled: "info", pending: "clock", note: "ball", newPlayer: "users" };
 
@@ -47,7 +47,7 @@ function Record({ label, text }: { label: string; text?: string }) {
 }
 
 export default function Dashboard() {
-  const { players, matches, matchPlayers, availability, activeSeason, settings, session, profile, isAdmin } = useApp();
+  const { players, matches, matchPlayers, signupsByMatch, activeSeason, settings, session, isAdmin } = useApp();
   const period = activeSeason ? ({ kind: "season", seasonId: activeSeason.id } as const) : ({ kind: "all" } as const);
   const { stats, matches: seasonMatches } = useStats(period);
   const { confirmed } = useStats();
@@ -67,11 +67,11 @@ export default function Dashboard() {
   );
   const last = confirmed[confirmed.length - 1];
   const recent = confirmed.slice(-5).reverse();
-  const av = next ? availability.filter((a) => a.match_id === next.id) : [];
-  const yes = av.filter((a) => a.status === "yes");
-  const maybe = av.filter((a) => a.status === "maybe").length;
-  const no = av.filter((a) => a.status === "no").length;
-  const canAnswer = !!session && !!profile?.player_id;
+  // Iscritti alla prossima partita (max 10): è il dato che il database garantisce.
+  const taken = next ? (signupsByMatch.get(next.id)?.length ?? 0) : 0;
+  const capacity = next ? capacityOf(next) : 10;
+  const nextState = next ? signupState(next, taken, now) : "chiusa";
+  const left = Math.max(0, capacity - taken);
 
   const top = (key: string) => {
     const r = rank(key)[0];
@@ -128,32 +128,27 @@ export default function Dashboard() {
                 <span className="inline-flex items-center gap-1.5"><Icon name="pin" size={18} className="text-pitch" /> {next.location}</span>
               </div>
 
-              <div className="mt-4">
-                <div className="flex items-baseline gap-2">
-                  <span className="font-display text-4xl font-extrabold text-pitch">{yes.length}</span>
-                  <span className="text-sm text-neutral-300">confermati su {SEATS} posti</span>
+              <div className="mt-4" aria-live="polite">
+                <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                  <span className="font-display text-4xl font-extrabold text-pitch">
+                    {taken}
+                    <span className="text-neutral-400">/{capacity}</span>
+                  </span>
+                  <span className="text-sm text-neutral-300">iscritti · {seatsText(taken, capacity, nextState)}</span>
                 </div>
-                <div
-                  role="progressbar"
-                  aria-label="Posti confermati"
-                  aria-valuemin={0}
-                  aria-valuemax={SEATS}
-                  aria-valuenow={Math.min(yes.length, SEATS)}
-                  className="mt-2 h-2.5 overflow-hidden rounded-full bg-ink-600"
-                >
-                  <div className="h-full rounded-full bg-pitch transition-all" style={{ width: `${Math.min(100, (yes.length / SEATS) * 100)}%` }} />
+                <div className="mt-2">
+                  <SeatsBar taken={taken} capacity={capacity} full={left === 0} label="Iscritti alla prossima partita" />
                 </div>
-                <div className="mt-1.5 text-xs text-neutral-400">{maybe} forse · {no} non ci sono</div>
               </div>
 
               <div className="mt-4 flex flex-wrap items-center gap-2">
                 <LinkButton href={`/partite/${next.id}`} variant="primary">
-                  {canAnswer ? "Dai la tua disponibilità" : "Vedi la partita"}
+                  {nextState === "aperta" ? "Iscriviti alla partita" : "Vedi la partita"}
                 </LinkButton>
                 {session ? (
                   <LinkButton href={`/partite/${next.id}#squadre`}>Genera le squadre</LinkButton>
                 ) : (
-                  <LinkButton href="/login">Accedi per rispondere</LinkButton>
+                  <LinkButton href="/login">Accedi</LinkButton>
                 )}
               </div>
             </>
